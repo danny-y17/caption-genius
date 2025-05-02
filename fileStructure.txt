@@ -1,0 +1,16 @@
+/src
+│
+├── /app          # Next.js App Router
+├── /components   # Shared React components (buttons, forms, modals)
+├── /features     # Domain-driven features (auth, caption, calendar)
+├── /hooks        # Custom React hooks (useAuth, useCaption)
+├── /lib          # API clients and third-party libraries (openai, stripe, supabase)
+├── /services     # Business logic services (e.g., captionService.ts)
+├── /types        # Global TypeScript types
+├── /context      # React Context Providers (auth state, user state)
+├── /middleware   # Middleware functions (auth checks)
+├── /utils        # Helper utilities (formatDate, debounce, etc.)
+├── /styles       # Global styles (already exists — Tailwind is here)
+├── /config       # App-wide configs (site.ts, openai.ts, stripe.ts)
+
+
