@@ -2,22 +2,43 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import Container from '@/components/Container';
+import { Container } from '@/components/ui/container';
 import { useAuth } from '@/hooks/useAuth';
+import { motion } from 'framer-motion';
+import { Mail, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import Header from '@/components/Header';
 
 const LoginPage = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState('');
   const { isAuthenticated } = useAuth(false);
+
+  // Load remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push('/captions');
     }
   }, [isAuthenticated, router]);
 
@@ -26,15 +47,23 @@ const LoginPage = () => {
     setError(null);
     setLoading(true);
 
-    const email = (event.target as HTMLFormElement).email.value;
-    const password = (event.target as HTMLFormElement).password.value;
+    const formData = new FormData(event.target as HTMLFormElement);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    // Handle remember me
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', email);
+    } else {
+      localStorage.removeItem('rememberedEmail');
+    }
 
     try {
       const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
-        callbackUrl: '/dashboard'
+        callbackUrl: '/captions'
       });
 
       if (result?.error) {
@@ -45,7 +74,7 @@ const LoginPage = () => {
           setError(result.error);
         }
       } else if (result?.ok) {
-        router.push('/dashboard');
+        router.push('/captions');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -56,62 +85,108 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Container className="!px-0">
-        <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-md w-full space-y-8">
-            <div>
-              <h2 className="mt-6 text-center text-3xl font-bold text-foreground">
-                Sign in to your account
-              </h2>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-grow flex items-center">
+        <section className="w-full bg-background/80 backdrop-blur-sm">
+          <Container>
+            <div className="max-w-md mx-auto px-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mb-6"
+              >
+                <Heading variant="h1" className="mb-1">
+                  Welcome Back
+                </Heading>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="flex flex-col">
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-foreground/60" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="Enter your email"
+                          className="pl-10 text-foreground bg-white/50 backdrop-blur-sm border-gray-200/50"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-foreground/60" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="Enter your password"
+                          className="pl-10 text-foreground bg-white/50 backdrop-blur-sm border-gray-200/50"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="remember" 
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                        />
+                        <label 
+                          htmlFor="remember" 
+                          className="text-sm text-foreground/80 cursor-pointer select-none"
+                        >
+                          Remember me
+                        </label>
+                      </div>
+                      <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/90">
+                        Forgot password?
+                      </Link>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="text-sm text-red-500 text-center">{error}</div>
+                  )}
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-primary/90 hover:bg-primary backdrop-blur-sm"
+                    disabled={loading}
+                  >
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <Text className="text-foreground/60">
+                    Don't have an account?{' '}
+                    <Link href="/signup" className="text-primary hover:text-primary/90">
+                      Sign up
+                    </Link>
+                  </Text>
+                </div>
+              </motion.div>
             </div>
-            <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-              <div className="rounded-md shadow-sm space-y-4">
-                <div>
-                  <label htmlFor="email" className="sr-only">
-                    Email address
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                    placeholder="Email address"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="password" className="sr-only">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                    placeholder="Password"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="text-red-500 text-sm text-center">{error}</div>
-              )}
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-black bg-primary hover:bg-primary-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
-                >
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Container>
+          </Container>
+        </section>
+      </main>
     </div>
   );
 };

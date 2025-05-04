@@ -9,7 +9,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentCaption } from '@/components/dashboard/RecentCaption';
 import { NicheButton } from '@/components/dashboard/NicheButton';
 import { stats, recentCaptions, popularNiches } from '@/data/dashboard';
-import Container from '@/components/Container';
+import { Container } from '@/components/ui/container';
 
 export default function DashboardLanding() {
   const { data: session, status } = useSession();
@@ -74,7 +74,10 @@ export default function DashboardLanding() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-foreground">Recent Captions</h2>
-              <button className="text-primary hover:text-primary/80 transition-colors font-medium">
+              <button 
+                onClick={() => router.push('/history')}
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
+              >
                 View All
               </button>
             </div>
