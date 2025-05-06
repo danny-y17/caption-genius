@@ -3,10 +3,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Container } from '@/components/ui/container';
-import { useAuth } from '@/hooks/useAuth';
 import { motion } from 'framer-motion';
 import { Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -17,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import Header from '@/components/Header';
+import { supabase } from '@/lib/supabase/client';
 
 const LoginPage = () => {
   const router = useRouter();
@@ -24,7 +23,6 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState('');
-  const { isAuthenticated } = useAuth(false);
 
   // Load remembered email on component mount
   useEffect(() => {
@@ -35,12 +33,14 @@ const LoginPage = () => {
     }
   }, []);
 
-  // Redirect if already authenticated
+  // Check if user is already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/captions');
-    }
-  }, [isAuthenticated, router]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.push('/dashboard');
+      }
+    });
+  }, [router]);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -59,26 +59,27 @@ const LoginPage = () => {
     }
 
     try {
-      const result = await signIn('credentials', {
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        redirect: false,
-        callbackUrl: '/captions'
       });
 
-      if (result?.error) {
-        console.error('Login error:', result.error);
-        if (result.error === 'CredentialsSignin') {
-          setError('Invalid email or password');
-        } else {
-          setError(result.error);
-        }
-      } else if (result?.ok) {
-        router.push('/captions');
+      if (error) {
+        throw error;
       }
+
+      router.push('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      setError('An error occurred during login');
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('An error occurred during login');
+      }
     } finally {
       setLoading(false);
     }

@@ -1,21 +1,6 @@
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useSupabase } from '@/components/Providers';
 
-export function useAuth(requireAuth = true) {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (requireAuth && status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, requireAuth, router]);
-
-  return {
-    session,
-    status,
-    isAuthenticated: status === 'authenticated',
-    isLoading: status === 'loading',
-  };
-} 
+export const useAuth = () => {
+  const { session } = useSupabase();
+  return { session };
+}; 

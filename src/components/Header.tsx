@@ -2,19 +2,19 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
 import { User, LogOut, Menu, X, Sparkles, Settings, UserCircle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-
 import { Container } from '@/components/ui/container';
 import { menuConfig } from '@/data/menu';
+import { useSupabase } from './Providers';
+import { supabase } from '@/lib/supabase/client';
 
 const Header: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const { data: session, status } = useSession();
+    const { session } = useSupabase();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -34,10 +34,7 @@ const Header: React.FC = () => {
 
     const handleSignOut = async () => {
         try {
-            await signOut({ 
-                redirect: false,
-                callbackUrl: '/login'
-            });
+            await supabase.auth.signOut();
             router.push('/login');
             router.refresh();
         } catch (error) {
@@ -85,9 +82,19 @@ const Header: React.FC = () => {
 
                     {/* Auth section */}
                     <div className="flex-1 flex justify-end">
-                        {status === 'loading' ? (
-                            <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
-                        ) : session ? (
+                        {!session ? (
+                            <div className="flex items-center gap-4">
+                                {pathname !== '/login' && (
+                                    <Link
+                                        href="/login"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors font-medium leading-none"
+                                    >
+                                        <User className="w-4 h-4" />
+                                        <span>Sign In</span>
+                                    </Link>
+                                )}
+                            </div>
+                        ) : (
                             <div className="relative" ref={dropdownRef}>
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
@@ -108,7 +115,7 @@ const Header: React.FC = () => {
                                         className="absolute right-0 mt-2 w-48 rounded-lg bg-background border border-gray-100/20 shadow-lg py-1"
                                     >
                                         <div className="px-4 py-2 border-b border-gray-100/20">
-                                            <p className="text-sm font-medium text-foreground">{session.user?.name || session.user?.email}</p>
+                                            <p className="text-sm font-medium text-foreground">{session.user.email}</p>
                                         </div>
                                         <Link
                                             href="/profile"
@@ -132,18 +139,6 @@ const Header: React.FC = () => {
                                             Sign Out
                                         </button>
                                     </motion.div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-4">
-                                {pathname !== '/login' && (
-                                    <Link
-                                        href="/login"
-                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors font-medium leading-none"
-                                    >
-                                        <User className="w-4 h-4" />
-                                        <span>Sign In</span>
-                                    </Link>
                                 )}
                             </div>
                         )}

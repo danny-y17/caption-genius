@@ -1,5 +1,3 @@
-// /app/api/generate-caption/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
 import { createClient } from '@/lib/supabase/server';
@@ -7,17 +5,17 @@ import { createClient } from '@/lib/supabase/server';
 // Initialize OpenAI with proper error handling
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Only if you're using it in the browser
+  dangerouslyAllowBrowser: true,
 });
 
 export async function POST(req: NextRequest) {
   try {
     // Get the session using Supabase
     const supabase = await createClient();
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (sessionError || !session) {
-      console.error('No session found:', sessionError);
+    if (!session) {
+      console.error('No session found');
       return NextResponse.json(
         { error: 'Unauthorized - Please sign in first' },
         { status: 401 }
@@ -26,7 +24,8 @@ export async function POST(req: NextRequest) {
 
     console.log('Session:', {
       userId: session.user.id,
-      email: session.user.email
+      hasAccessToken: !!session.access_token,
+      accessTokenLength: session.access_token?.length
     });
 
     // Check if OpenAI API key is configured
@@ -134,4 +133,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+} 

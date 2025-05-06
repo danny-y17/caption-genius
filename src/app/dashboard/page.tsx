@@ -1,8 +1,7 @@
 "use client";
 
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -10,18 +9,21 @@ import { RecentCaption } from '@/components/dashboard/RecentCaption';
 import { NicheButton } from '@/components/dashboard/NicheButton';
 import { stats, recentCaptions, popularNiches } from '@/data/dashboard';
 import { Container } from '@/components/ui/container';
+import { useSupabase } from '@/components/Providers';
 
 export default function DashboardLanding() {
-  const { data: session, status } = useSession();
+  const { session } = useSupabase();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!session && !loading) {
       router.push('/login');
     }
-  }, [status, router]);
+    setLoading(false);
+  }, [session, loading, router]);
 
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -43,7 +45,7 @@ export default function DashboardLanding() {
               <Sparkles className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-4 text-foreground tracking-tight">
-              Welcome, {session.user?.name || session.user?.email}
+              Welcome, {session.user.email}
             </h1>
             <p className="text-lg text-foreground/80 mb-8 max-w-xl mx-auto">
               Your AI-powered caption generation dashboard

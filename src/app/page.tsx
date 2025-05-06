@@ -2,9 +2,9 @@
 
 import { motion, useInView } from 'framer-motion';
 import { Sparkles, Zap, Shield, Globe, Code, BarChart, CheckCircle, Users, Clock, Target } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRef } from 'react';
+import { useSupabase } from '@/components/Providers';
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
@@ -96,7 +96,7 @@ const benefits = [
 
 
 export default function Home() {
-    const { data: session } = useSession();
+    const { session } = useSupabase();
     const heroRef = useRef(null);
     const benefitsRef = useRef(null);
     const featuresRef = useRef(null);
