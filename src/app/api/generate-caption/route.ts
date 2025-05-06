@@ -1,14 +1,8 @@
 // /app/api/generate-caption/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { OpenAI } from 'openai';
 import { createClient } from '@/lib/supabase/server';
-
-// Initialize OpenAI with proper error handling
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Only if you're using it in the browser
-});
+import { openai } from '@/services/openai';
 
 export async function POST(req: NextRequest) {
   try {

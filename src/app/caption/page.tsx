@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, Copy, Heart, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -47,13 +47,7 @@ export default function CaptionGeneratorPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loadingCaptions, setLoadingCaptions] = useState(true);
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchRecentCaptions();
-    }
-  }, [session, currentPage]);
-
-  const fetchRecentCaptions = async () => {
+  const fetchRecentCaptions = useCallback(async () => {
     try {
       setLoadingCaptions(true);
       const { data, error } = await supabase
@@ -87,7 +81,13 @@ export default function CaptionGeneratorPage() {
     } finally {
       setLoadingCaptions(false);
     }
-  };
+  }, [session?.user?.id, currentPage]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchRecentCaptions();
+    }
+  }, [session, currentPage, fetchRecentCaptions]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
