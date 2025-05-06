@@ -12,21 +12,33 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
-    // Get the session using Supabase
+    // Get the session using Supabase with cookie handling
     const supabase = await createClient();
+    
+    // Get the session from cookies
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (sessionError || !session) {
-      console.error('No session found:', sessionError);
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { error: 'Session error - Please sign in again' },
+        { status: 401 }
+      );
+    }
+
+    if (!session) {
+      console.error('No session found in cookies');
       return NextResponse.json(
         { error: 'Unauthorized - Please sign in first' },
         { status: 401 }
       );
     }
 
-    console.log('Session:', {
+    // Log session details
+    console.log('Session details:', {
+      hasSession: !!session,
       userId: session.user.id,
-      email: session.user.email
+      hasAccessToken: !!session.access_token
     });
 
     // Check if OpenAI API key is configured

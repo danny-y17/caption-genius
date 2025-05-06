@@ -10,6 +10,7 @@ import { NicheButton } from '@/components/dashboard/NicheButton';
 import { stats, recentCaptions, popularNiches } from '@/data/dashboard';
 import { Container } from '@/components/ui/container';
 import { useSupabase } from '@/components/Providers';
+import Link from 'next/link';
 
 export default function DashboardLanding() {
   const { session } = useSupabase();
@@ -57,8 +58,11 @@ export default function DashboardLanding() {
               >
                 Generate New Caption
               </button>
-              <button className="px-6 py-3 rounded-xl font-semibold bg-white text-primary border-2 border-primary shadow hover:bg-primary/5 transition">
-                View History
+              <button 
+                onClick={() => router.push('/history')}
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                View All
               </button>
             </div>
           </motion.div>
@@ -76,12 +80,12 @@ export default function DashboardLanding() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-foreground">Recent Captions</h2>
-              <button 
-                onClick={() => router.push('/history')}
+              <Link 
+                href="/history"
                 className="text-primary hover:text-primary/80 transition-colors font-medium"
               >
                 View All
-              </button>
+              </Link>
             </div>
             <div className="space-y-4">
               {recentCaptions.map((caption, i) => (

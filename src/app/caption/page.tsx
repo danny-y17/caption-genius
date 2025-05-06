@@ -2,13 +2,26 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2, Copy, Heart, History } from 'lucide-react';
+import { Sparkles, Loader2, Copy, Heart, History, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useSupabase } from '@/components/Providers';
+import { supabase } from '@/lib/supabase/client';
 
 interface CaptionResponse {
   caption: string;
   error?: string;
+}
+
+interface RecentCaption {
+  id: string;
+  generated_caption: string;
+  created_at: string;
+  prompt: string;
+  niches: {
+    name: string;
+  } | null;
 }
 
 const niches = [
@@ -21,12 +34,65 @@ const niches = [
 ];
 
 export default function CaptionGeneratorPage() {
+  const { session } = useSupabase();
   const [niche, setNiche] = useState(niches[0].id);
   const [input, setInput] = useState('');
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
+  const [recentCaptions, setRecentCaptions] = useState<RecentCaption[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingCaptions, setLoadingCaptions] = useState(true);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchRecentCaptions();
+    }
+  }, [session, currentPage]);
+
+  const fetchRecentCaptions = async () => {
+    try {
+      setLoadingCaptions(true);
+      const { data, error } = await supabase
+        .from('captions')
+        .select(`
+          id,
+          generated_caption,
+          created_at,
+          prompt,
+          niches (
+            name
+          )
+        `)
+        .eq('user_id', session?.user.id)
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * 5, currentPage * 5 - 1)
+        .returns<RecentCaption[]>();
+
+      if (error) throw error;
+
+      // Get total count
+      const { count } = await supabase
+        .from('captions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session?.user.id);
+
+      setTotalPages(Math.ceil((count || 0) / 5));
+      setRecentCaptions(data || []);
+    } catch (error) {
+      console.error('Error fetching recent captions:', error);
+    } finally {
+      setLoadingCaptions(false);
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setCurrentPage(newPage);
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -277,14 +343,82 @@ export default function CaptionGeneratorPage() {
             <motion.button
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/history')}
               className="px-4 py-2 rounded-lg font-medium bg-gray-100 hover:bg-gray-200 text-foreground border border-gray-200 transition-all duration-200 flex items-center space-x-2"
             >
               <History className="w-4 h-4" />
-              <span>View All</span>
+              <span className="text-primary hover:text-primary/80 transition-colors font-medium">
+                View All
+              </span>
             </motion.button>
           </div>
-          <div className="text-center text-foreground/60 py-12 bg-gray-50 rounded-xl">
-            <p>Your recent captions will appear here</p>
+          <div className="bg-gray-50 rounded-xl p-6">
+            {loadingCaptions ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : recentCaptions.length > 0 ? (
+              <div className="space-y-4">
+                {recentCaptions.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-lg p-4 border border-gray-200/50 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground/80">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">
+                          {item.niches?.name || 'General'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(item.generated_caption);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Copy caption"
+                      >
+                        <Copy className="w-4 h-4 text-foreground/70" />
+                      </button>
+                    </div>
+                    <p className="text-foreground/80 text-sm leading-relaxed">{item.generated_caption}</p>
+                  </motion.div>
+                ))}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-4 mt-6 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 disabled:opacity-50 hover:bg-gray-100 transition-colors text-foreground"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="text-sm font-medium">Previous</span>
+                    </button>
+                    <span className="text-sm font-medium text-foreground">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 disabled:opacity-50 hover:bg-gray-100 transition-colors text-foreground"
+                    >
+                      <span className="text-sm font-medium">Next</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-foreground/60">No recent captions</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -293,7 +427,7 @@ export default function CaptionGeneratorPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
+          className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {[
             {
@@ -317,7 +451,7 @@ export default function CaptionGeneratorPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 + index * 0.1 }}
-              className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-gray-200"
+              className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow"
             >
               <div className="text-4xl mb-4 floating">{feature.icon}</div>
               <h3 className="text-lg font-medium text-foreground mb-2">{feature.title}</h3>
@@ -325,6 +459,9 @@ export default function CaptionGeneratorPage() {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* Bottom Spacing */}
+        <div className="h-16"></div>
       </div>
     </div>
   );

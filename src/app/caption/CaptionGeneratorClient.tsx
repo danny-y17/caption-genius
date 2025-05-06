@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/components/Providers';
 import { Container } from '@/components/ui/container';
@@ -8,23 +8,47 @@ import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 export default function CaptionGeneratorClient() {
-  const { session } = useSupabase();
+  const { session, isLoading } = useSupabase();
   const router = useRouter();
   const [input, setInput] = useState('');
   const [niche, setNiche] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCaption, setGeneratedCaption] = useState('');
 
+  useEffect(() => {
+    if (!isLoading && !session) {
+      router.push('/login');
+    }
+  }, [isLoading, session, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!session) {
+    console.log('Session state:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.access_token,
+      accessTokenLength: session?.access_token?.length
+    });
+
+    if (!session?.access_token) {
       toast.error('Please sign in to generate captions');
       router.push('/login');
       return;
@@ -44,21 +68,47 @@ export default function CaptionGeneratorClient() {
       setIsGenerating(true);
       setGeneratedCaption('');
 
+      // Log session details
+      console.log('Session details:', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.access_token,
+        tokenLength: session?.access_token?.length,
+        token: session?.access_token
+      });
+
+      if (!session?.access_token) {
+        toast.error('No session token found. Please sign in again.');
+        router.push('/login');
+        return;
+      }
+
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      headers.append('Authorization', `Bearer ${session.access_token}`);
+
+      // Log the actual headers being sent
+      console.log('Request headers:', {
+        contentType: headers.get('Content-Type'),
+        auth: headers.get('Authorization')?.substring(0, 20) + '...',
+        allHeaders: Object.fromEntries(headers.entries())
+      });
+
       const response = await fetch('/api/generate-caption', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
+        credentials: 'include',
         body: JSON.stringify({ input, niche }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error || 'Failed to generate caption');
       }
 
+      const data = await response.json();
       setGeneratedCaption(data.caption);
       toast.success('Caption generated successfully!');
     } catch (error) {
@@ -74,6 +124,7 @@ export default function CaptionGeneratorClient() {
       await navigator.clipboard.writeText(generatedCaption);
       toast.success('Caption copied to clipboard!');
     } catch (error) {
+      console.error('Copy failed:', error);
       toast.error('Failed to copy caption');
     }
   };
@@ -125,14 +176,18 @@ export default function CaptionGeneratorClient() {
                     <label htmlFor="niche" className="text-sm font-medium text-foreground">
                       Select Your Niche
                     </label>
-                    <Select
-                      id="niche"
-                      value={niche}
-                      onValueChange={setNiche}
-                      options={nicheOptions}
-                      placeholder="Choose your business niche..."
-                      className="w-full"
-                    />
+                    <Select value={niche} onValueChange={setNiche}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose your business niche..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nicheOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
