@@ -14,7 +14,7 @@ import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import Header from '@/components/Header';
+import Header from '@/components/layout/Header';
 import { supabase } from '@/lib/supabase/client';
 
 const LoginPage = () => {

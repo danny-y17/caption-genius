@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils/cn';
 
 interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;

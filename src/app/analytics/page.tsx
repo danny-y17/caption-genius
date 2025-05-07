@@ -16,7 +16,7 @@ import {
   Calendar,
   Download
 } from 'lucide-react';
-import Header from '@/components/Header';
+import Header from '@/components/layout/Header';
 
 // Mock data - replace with actual API calls
 const mockAnalytics = {

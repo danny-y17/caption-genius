@@ -8,8 +8,8 @@ import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Copy, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import Header from '@/components/Header';
-import { useSupabase } from '@/components/Providers';
+import Header from '@/components/layout/Header';
+import { useSupabase } from '@/app/providers/Providers';
 import { supabase } from '@/lib/supabase/client';
 
 interface CaptionHistory {

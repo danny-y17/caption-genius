@@ -1,11 +1,11 @@
 import "./globals.css"
 import type { Metadata } from 'next'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
+import Header from '@/components/layout/Header'
+import Footer from '@/components/layout/Footer'
 import { siteDetails } from '@/data/siteDetails'
 import { Source_Sans_3, Manrope } from "next/font/google";
 import { GoogleAnalytics } from '@next/third-parties/google';
-import Providers from '@/components/Providers';
+import Providers from '@/app/providers/Providers';
 
 const manrope = Manrope({ subsets: ['latin'] });
 const sourceSans = Source_Sans_3({ subsets: ['latin'] });

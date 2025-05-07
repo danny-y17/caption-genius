@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, Copy, Heart, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useSupabase } from '@/components/Providers';
+import { useSupabase } from '@/app/providers/Providers';
 import { supabase } from '@/lib/supabase/client';
 
 interface CaptionResponse {

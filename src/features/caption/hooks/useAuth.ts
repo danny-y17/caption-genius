@@ -1,4 +1,4 @@
-import { useSupabase } from '@/components/Providers';
+import { useSupabase } from '@/app/providers/Providers';
 
 // logic for authentication
 export const useAuth = () => {

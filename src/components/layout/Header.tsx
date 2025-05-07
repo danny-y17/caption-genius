@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Container } from '@/components/ui/container';
 import { menuConfig } from '@/data/menu';
-import { useSupabase } from './Providers';
+import { useSupabase } from '@/app/providers/Providers';
 import { supabase } from '@/lib/supabase/client';
 
 const Header: React.FC = () => {

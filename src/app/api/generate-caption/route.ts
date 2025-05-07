@@ -1,13 +1,13 @@
 // /app/api/generate-caption/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { openai } from '@/services/openai';
 
 export async function POST(req: NextRequest) {
   try {
     // Get the session using Supabase with cookie handling
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     
     // Get the session from cookies
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
