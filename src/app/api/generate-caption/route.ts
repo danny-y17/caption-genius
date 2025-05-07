@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
-
+    
     if (!session) {
       console.error('No session found in cookies');
       return NextResponse.json(
@@ -53,9 +53,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = `Generate a creative and engaging social media caption for a ${niche} business. 
-    Context: ${input}
-    Make it authentic, engaging, and suitable for Instagram. Include relevant hashtags.`;
+    // Fetch user's AI configuration
+    const { data: aiConfig, error: aiConfigError } = await supabase
+      .from('ai_configurations')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (aiConfigError && aiConfigError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching AI configuration:', aiConfigError);
+      return NextResponse.json(
+        { error: 'Failed to fetch AI configuration' },
+        { status: 500 }
+      );
+    }
+
+    // Build the prompt with AI preferences if available
+    let prompt = `Generate a creative and engaging social media caption for a ${niche} business. 
+    Context: ${input}`;
+
+    if (aiConfig) {
+      prompt += `\n\nPlease follow these preferences:
+      - Purpose: ${aiConfig.purpose}
+      - Tone: ${aiConfig.tone}
+      - Style: ${aiConfig.preferences}
+      ${aiConfig.additional_traits ? `- Additional traits: ${aiConfig.additional_traits}` : ''}`;
+    }
+
+    prompt += '\nMake it authentic, engaging, and suitable for Instagram. Include relevant hashtags.';
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",

@@ -93,6 +93,32 @@ CREATE TABLE public.templates (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- AI Configurations
+CREATE TABLE public.ai_configurations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) NOT NULL,
+    purpose TEXT NOT NULL,
+    tone TEXT NOT NULL,
+    preferences TEXT NOT NULL,
+    additional_traits TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Scheduled Posts
+CREATE TABLE public.scheduled_posts (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) NOT NULL,
+    caption_id UUID REFERENCES public.captions(id) NOT NULL,
+    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    platform TEXT NOT NULL,
+    status TEXT CHECK (status IN ('scheduled', 'published', 'failed', 'cancelled')) DEFAULT 'scheduled',
+    content_type TEXT CHECK (content_type IN ('promotional', 'educational', 'entertaining', 'engagement')) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- RLS Policies
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.captions ENABLE ROW LEVEL SECURITY;
@@ -102,6 +128,8 @@ ALTER TABLE public.caption_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.usage_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_configurations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scheduled_posts ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -151,6 +179,40 @@ CREATE POLICY "Users can view their own templates"
 
 CREATE POLICY "Users can manage their own templates"
     ON public.templates FOR ALL
+    USING (auth.uid() = user_id);
+
+-- AI Configurations policies
+CREATE POLICY "Users can view their own AI configurations"
+    ON public.ai_configurations FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own AI configurations"
+    ON public.ai_configurations FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own AI configurations"
+    ON public.ai_configurations FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own AI configurations"
+    ON public.ai_configurations FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Scheduled posts policies
+CREATE POLICY "Users can view their own scheduled posts"
+    ON public.scheduled_posts FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own scheduled posts"
+    ON public.scheduled_posts FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own scheduled posts"
+    ON public.scheduled_posts FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own scheduled posts"
+    ON public.scheduled_posts FOR DELETE
     USING (auth.uid() = user_id);
 
 -- Functions

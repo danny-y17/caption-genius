@@ -25,6 +25,7 @@ import { Session } from '@supabase/supabase-js';
 
 export default function AccountPage() {
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -35,20 +36,35 @@ export default function AccountPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        if (!session) {
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (!session) {
+        router.push('/login');
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,13 +116,21 @@ export default function AccountPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   if (!session) {
-    router.push('/login');
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-surface to-surface-light py-12">
+    <div className="min-h-screen bg-gradient-to-br from-background via-surface to-surface-light">
+      <div className="pt-24 pb-12">
       <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -250,7 +274,7 @@ export default function AccountPage() {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       className="bg-red-500 hover:bg-red-600"
-                      onClick={handleDeleteAccount}
+                        onClick={handleDeleteAccount}
                     >
                       Delete Account
                     </AlertDialogAction>
@@ -259,6 +283,7 @@ export default function AccountPage() {
               </AlertDialog>
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
     </div>
