@@ -116,6 +116,42 @@ CREATE TABLE public.scheduled_posts (
     status TEXT CHECK (status IN ('scheduled', 'published', 'failed', 'cancelled')) DEFAULT 'scheduled',
     content_type TEXT CHECK (content_type IN ('promotional', 'educational', 'entertaining', 'engagement')) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    next_retry_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB
+);
+
+-- Post Analytics
+CREATE TABLE public.post_analytics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    post_id UUID REFERENCES public.scheduled_posts(id) ON DELETE CASCADE,
+    platform TEXT NOT NULL,
+    engagement_metrics JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Post Status History
+CREATE TABLE public.post_status_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    post_id UUID REFERENCES public.scheduled_posts(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Post Templates
+CREATE TABLE public.post_templates (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) NOT NULL,
+    name TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    schedule_pattern JSONB,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -130,6 +166,9 @@ ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_configurations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scheduled_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.post_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.post_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.post_templates ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -215,6 +254,33 @@ CREATE POLICY "Users can delete their own scheduled posts"
     ON public.scheduled_posts FOR DELETE
     USING (auth.uid() = user_id);
 
+-- Post Analytics policies
+CREATE POLICY "Users can view their own post analytics"
+    ON public.post_analytics FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.scheduled_posts
+        WHERE scheduled_posts.id = post_analytics.post_id
+        AND scheduled_posts.user_id = auth.uid()
+    ));
+
+-- Post Status History policies
+CREATE POLICY "Users can view their own post status history"
+    ON public.post_status_history FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.scheduled_posts
+        WHERE scheduled_posts.id = post_status_history.post_id
+        AND scheduled_posts.user_id = auth.uid()
+    ));
+
+-- Post Templates policies
+CREATE POLICY "Users can view their own post templates"
+    ON public.post_templates FOR SELECT
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can manage their own post templates"
+    ON public.post_templates FOR ALL
+    USING (user_id = auth.uid());
+
 -- Functions
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -251,4 +317,22 @@ INSERT INTO public.niches (name, description) VALUES
     ('Beauty Salon', 'Captions for beauty salons and spas'),
     ('Restaurant', 'Captions for restaurants and food businesses'),
     ('Fitness Studio', 'Captions for gyms and fitness studios'),
-    ('Retail Shop', 'Captions for retail stores and boutiques'); 
+    ('Retail Shop', 'Captions for retail stores and boutiques');
+
+-- Add trigger for post status history
+CREATE OR REPLACE FUNCTION public.handle_post_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS NULL OR OLD.status != NEW.status THEN
+        INSERT INTO public.post_status_history (post_id, status, error_message)
+        VALUES (NEW.id, NEW.status, NEW.error_message);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_post_status_change
+    AFTER UPDATE ON public.scheduled_posts
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION public.handle_post_status_change(); 

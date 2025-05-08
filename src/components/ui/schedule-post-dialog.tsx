@@ -18,13 +18,33 @@ interface Caption {
   };
 }
 
+interface ScheduledPost {
+  id: string;
+  caption_id: string;
+  scheduled_time: string;
+  platform: string;
+  content_type: string;
+  caption: {
+    generated_caption: string;
+    niches: {
+      name: string;
+    };
+  };
+}
+
 interface SchedulePostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editingPost?: ScheduledPost | null;
 }
 
-export function SchedulePostDialog({ open, onOpenChange, onSuccess }: SchedulePostDialogProps) {
+export function SchedulePostDialog({ 
+  open, 
+  onOpenChange, 
+  onSuccess,
+  editingPost 
+}: SchedulePostDialogProps) {
   const [loading, setLoading] = useState(false);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [selectedCaption, setSelectedCaption] = useState<string>('');
@@ -35,8 +55,20 @@ export function SchedulePostDialog({ open, onOpenChange, onSuccess }: SchedulePo
   useEffect(() => {
     if (open) {
       fetchRecentCaptions();
+      if (editingPost) {
+        setSelectedCaption(editingPost.caption_id);
+        setScheduledTime(new Date(editingPost.scheduled_time).toISOString().slice(0, 16));
+        setPlatform(editingPost.platform);
+        setContentType(editingPost.content_type);
+      } else {
+        // Reset form when opening for new post
+        setSelectedCaption('');
+        setScheduledTime('');
+        setPlatform('instagram');
+        setContentType('promotional');
+      }
     }
-  }, [open]);
+  }, [open, editingPost]);
 
   const fetchRecentCaptions = async () => {
     try {
@@ -76,24 +108,41 @@ export function SchedulePostDialog({ open, onOpenChange, onSuccess }: SchedulePo
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 
-      const { error } = await supabase
-        .from('scheduled_posts')
-        .insert({
-          user_id: session.user.id,
-          caption_id: selectedCaption,
-          scheduled_time: scheduledTime,
-          platform,
-          content_type: contentType,
-        });
+      if (editingPost) {
+        // Update existing post
+        const { error } = await supabase
+          .from('scheduled_posts')
+          .update({
+            caption_id: selectedCaption,
+            scheduled_time: scheduledTime,
+            platform,
+            content_type: contentType,
+          })
+          .eq('id', editingPost.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success('Post updated successfully');
+      } else {
+        // Create new post
+        const { error } = await supabase
+          .from('scheduled_posts')
+          .insert({
+            user_id: session.user.id,
+            caption_id: selectedCaption,
+            scheduled_time: scheduledTime,
+            platform,
+            content_type: contentType,
+          });
 
-      toast.success('Post scheduled successfully');
+        if (error) throw error;
+        toast.success('Post scheduled successfully');
+      }
+
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error('Error scheduling post:', error);
-      toast.error('Failed to schedule post');
+      toast.error(editingPost ? 'Failed to update post' : 'Failed to schedule post');
     } finally {
       setLoading(false);
     }
@@ -103,7 +152,7 @@ export function SchedulePostDialog({ open, onOpenChange, onSuccess }: SchedulePo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Schedule Post</DialogTitle>
+          <DialogTitle>{editingPost ? 'Edit Post' : 'Schedule Post'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -171,7 +220,9 @@ export function SchedulePostDialog({ open, onOpenChange, onSuccess }: SchedulePo
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Scheduling...' : 'Schedule Post'}
+              {loading 
+                ? (editingPost ? 'Updating...' : 'Scheduling...') 
+                : (editingPost ? 'Update Post' : 'Schedule Post')}
             </Button>
           </DialogFooter>
         </form>

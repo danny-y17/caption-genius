@@ -18,6 +18,7 @@ import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { SchedulePostDialog } from '@/components/ui/schedule-post-dialog';
+import { PostPreviewDialog } from '@/components/ui/post-preview-dialog';
 
 const locales = {
   'en-US': require('date-fns/locale/en-US'),
@@ -59,11 +60,13 @@ export default function CalendarPage() {
   const [contentMix, setContentMix] = useState<ContentMix[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
 
   useEffect(() => {
     if (session?.user?.id) {
       fetchScheduledPosts();
-      calculateContentMix();
     } else {
       setLoading(false);
     }
@@ -91,6 +94,7 @@ export default function CalendarPage() {
 
       if (error) throw error;
       setScheduledPosts(data || []);
+      calculateContentMix(data || []);
     } catch (error) {
       console.error('Error fetching scheduled posts:', error);
       toast.error('Failed to load scheduled posts');
@@ -99,7 +103,7 @@ export default function CalendarPage() {
     }
   };
 
-  const calculateContentMix = () => {
+  const calculateContentMix = (posts: ScheduledPost[]) => {
     const mix: ContentMix[] = [
       { type: 'promotional', count: 0, percentage: 0 },
       { type: 'educational', count: 0, percentage: 0 },
@@ -107,7 +111,7 @@ export default function CalendarPage() {
       { type: 'engagement', count: 0, percentage: 0 },
     ];
 
-    scheduledPosts.forEach(post => {
+    posts.forEach(post => {
       const type = post.content_type;
       const index = mix.findIndex(m => m.type === type);
       if (index !== -1) {
@@ -121,6 +125,39 @@ export default function CalendarPage() {
     });
 
     setContentMix(mix);
+  };
+
+  const handleEventClick = (event: any) => {
+    const post = event.resource as ScheduledPost;
+    setSelectedPost(post);
+    setShowPreview(true);
+  };
+
+  const handleEditPost = (postId: string) => {
+    const post = scheduledPosts.find(p => p.id === postId);
+    if (post) {
+      setEditingPost(post);
+      setShowScheduleForm(true);
+      setShowPreview(false);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('scheduled_posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      toast.success('Post deleted successfully');
+      fetchScheduledPosts();
+      setShowPreview(false);
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
   };
 
   const getBestTimeToPost = () => {
@@ -185,10 +222,7 @@ export default function CalendarPage() {
                     startAccessor="start"
                     endAccessor="end"
                     style={{ height: '100%' }}
-                    onSelectEvent={(event) => {
-                      // Handle event click
-                      console.log('Selected event:', event);
-                    }}
+                    onSelectEvent={handleEventClick}
                     onSelectSlot={(slotInfo) => {
                       setSelectedDate(slotInfo.start);
                       setShowScheduleForm(true);
@@ -290,14 +324,36 @@ export default function CalendarPage() {
               </motion.div>
             </div>
           </div>
+
+          {/* Post Preview Dialog */}
+          <PostPreviewDialog
+            open={showPreview}
+            onOpenChange={setShowPreview}
+            post={selectedPost ? {
+              id: selectedPost.id,
+              caption: selectedPost.caption.generated_caption,
+              niche: selectedPost.caption.niches.name,
+              scheduledTime: selectedPost.scheduled_time,
+              platform: selectedPost.platform,
+              contentType: selectedPost.content_type,
+              status: selectedPost.status
+            } : null}
+            onEdit={handleEditPost}
+            onDelete={handleDeletePost}
+          />
+
+          {/* Schedule Post Dialog */}
+          <SchedulePostDialog
+            open={showScheduleForm}
+            onOpenChange={(open) => {
+              setShowScheduleForm(open);
+              if (!open) setEditingPost(null);
+            }}
+            onSuccess={fetchScheduledPosts}
+            editingPost={editingPost}
+          />
         </Container>
       </main>
-
-      <SchedulePostDialog
-        open={showScheduleForm}
-        onOpenChange={setShowScheduleForm}
-        onSuccess={fetchScheduledPosts}
-      />
     </div>
   );
 } 
