@@ -1,25 +1,43 @@
 import { MenuConfig } from '@/types/menu';
-import { History, BarChart, Sparkles } from 'lucide-react';
+import { Home, Calendar, History, Sparkles } from 'lucide-react';
 
 export const menuConfig: MenuConfig = {
     authenticated: [
+        {
+            text: "Home",
+            url: "/dashboard",
+            icon: Home
+        },
         {
             text: "Generate",
             url: "/caption",
             icon: Sparkles
         },
         {
+            text: "Calendar",
+            url: "/calendar",
+            icon: Calendar
+        },
+        {
             text: "History",
             url: "/history",
             icon: History
-        },
-        {
-            text: "Analytics",
-            url: "/analytics",
-            icon: BarChart
         }
     ],
-    unauthenticated: [],
+    unauthenticated: [
+        {
+            text: "Home",
+            url: "/"
+        },
+        {
+            text: "Pricing",
+            url: "/pricing"
+        },
+        {
+            text: "Login",
+            url: "/login"
+        }
+    ],
     footer: [
         {
             title: "Product",

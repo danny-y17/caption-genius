@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils/cn';
 
 interface TextProps extends React.HTMLAttributes<HTMLParagraphElement> {
   children: React.ReactNode;

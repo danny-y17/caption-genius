@@ -4,14 +4,13 @@ import { motion, useInView } from 'framer-motion';
 import { Sparkles, Zap, Shield, Globe, Code, BarChart, CheckCircle, Users, Clock, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useRef } from 'react';
-import { useSupabase } from '@/components/Providers';
+import { useSupabase } from '@/app/providers/Providers';
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { Grid } from '@/components/ui/grid';
-import Header from '@/components/Header';
 
 const features = [
     {
@@ -109,8 +108,7 @@ export default function Home() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-grow">
+            <div className="flex-grow">
                 {/* Hero Section */}
                 <section ref={heroRef} className="py-20 bg-gradient-to-b from-background to-background/80 relative overflow-hidden">
                     <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
@@ -253,7 +251,7 @@ export default function Home() {
                         </div>
                     </Container>
                 </section>
-            </main>
+            </div>
         </div>
     );
 }

@@ -93,6 +93,68 @@ CREATE TABLE public.templates (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- AI Configurations
+CREATE TABLE public.ai_configurations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) NOT NULL,
+    purpose TEXT NOT NULL,
+    tone TEXT NOT NULL,
+    preferences TEXT NOT NULL,
+    additional_traits TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Scheduled Posts
+CREATE TABLE public.scheduled_posts (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) NOT NULL,
+    caption_id UUID REFERENCES public.captions(id) NOT NULL,
+    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    platform TEXT NOT NULL,
+    status TEXT CHECK (status IN ('scheduled', 'published', 'failed', 'cancelled')) DEFAULT 'scheduled',
+    content_type TEXT CHECK (content_type IN ('promotional', 'educational', 'entertaining', 'engagement')) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    next_retry_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB
+);
+
+-- Post Analytics
+CREATE TABLE public.post_analytics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    post_id UUID REFERENCES public.scheduled_posts(id) ON DELETE CASCADE,
+    platform TEXT NOT NULL,
+    engagement_metrics JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Post Status History
+CREATE TABLE public.post_status_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    post_id UUID REFERENCES public.scheduled_posts(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Post Templates
+CREATE TABLE public.post_templates (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) NOT NULL,
+    name TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    schedule_pattern JSONB,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- RLS Policies
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.captions ENABLE ROW LEVEL SECURITY;
@@ -102,6 +164,11 @@ ALTER TABLE public.caption_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.usage_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_configurations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scheduled_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.post_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.post_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.post_templates ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -153,6 +220,67 @@ CREATE POLICY "Users can manage their own templates"
     ON public.templates FOR ALL
     USING (auth.uid() = user_id);
 
+-- AI Configurations policies
+CREATE POLICY "Users can view their own AI configurations"
+    ON public.ai_configurations FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own AI configurations"
+    ON public.ai_configurations FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own AI configurations"
+    ON public.ai_configurations FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own AI configurations"
+    ON public.ai_configurations FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Scheduled posts policies
+CREATE POLICY "Users can view their own scheduled posts"
+    ON public.scheduled_posts FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own scheduled posts"
+    ON public.scheduled_posts FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own scheduled posts"
+    ON public.scheduled_posts FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own scheduled posts"
+    ON public.scheduled_posts FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Post Analytics policies
+CREATE POLICY "Users can view their own post analytics"
+    ON public.post_analytics FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.scheduled_posts
+        WHERE scheduled_posts.id = post_analytics.post_id
+        AND scheduled_posts.user_id = auth.uid()
+    ));
+
+-- Post Status History policies
+CREATE POLICY "Users can view their own post status history"
+    ON public.post_status_history FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.scheduled_posts
+        WHERE scheduled_posts.id = post_status_history.post_id
+        AND scheduled_posts.user_id = auth.uid()
+    ));
+
+-- Post Templates policies
+CREATE POLICY "Users can view their own post templates"
+    ON public.post_templates FOR SELECT
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can manage their own post templates"
+    ON public.post_templates FOR ALL
+    USING (user_id = auth.uid());
+
 -- Functions
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -167,6 +295,29 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.delete_user()
+RETURNS void AS $$
+DECLARE
+    uid UUID := auth.uid();
+BEGIN
+    IF uid IS NULL THEN
+        RAISE EXCEPTION 'Unauthorized';
+    END IF;
+
+    DELETE FROM public.scheduled_posts WHERE user_id = uid;
+    DELETE FROM public.captions WHERE user_id = uid;
+    DELETE FROM public.usage_logs WHERE user_id = uid;
+    DELETE FROM public.templates WHERE user_id = uid;
+    DELETE FROM public.ai_configurations WHERE user_id = uid;
+    DELETE FROM public.post_templates WHERE user_id = uid;
+    DELETE FROM public.profiles WHERE id = uid;
+    DELETE FROM auth.users WHERE id = uid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION public.delete_user() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_user() TO authenticated;
 
 -- Triggers
 CREATE TRIGGER on_auth_user_created
@@ -189,4 +340,22 @@ INSERT INTO public.niches (name, description) VALUES
     ('Beauty Salon', 'Captions for beauty salons and spas'),
     ('Restaurant', 'Captions for restaurants and food businesses'),
     ('Fitness Studio', 'Captions for gyms and fitness studios'),
-    ('Retail Shop', 'Captions for retail stores and boutiques'); 
+    ('Retail Shop', 'Captions for retail stores and boutiques');
+
+-- Add trigger for post status history
+CREATE OR REPLACE FUNCTION public.handle_post_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS NULL OR OLD.status != NEW.status THEN
+        INSERT INTO public.post_status_history (post_id, status, error_message)
+        VALUES (NEW.id, NEW.status, NEW.error_message);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_post_status_change
+    AFTER UPDATE ON public.scheduled_posts
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION public.handle_post_status_change(); 

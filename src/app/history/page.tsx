@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Container } from '@/components/ui/container';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Copy, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import Header from '@/components/Header';
-import { useSupabase } from '@/components/Providers';
+import { useSupabase } from '@/app/providers/Providers';
 import { supabase } from '@/lib/supabase/client';
 
 interface CaptionHistory {
-  id: number;
+  id: string;
   date: string;
   caption: string;
   prompt: string;
@@ -21,28 +20,26 @@ interface CaptionHistory {
   created_at: string;
 }
 
+interface CaptionRow {
+  id: string;
+  generated_caption: string;
+  prompt: string;
+  created_at: string;
+  niches: {
+    name: string;
+  }[] | null;
+}
+
 export default function HistoryPage() {
   const { session } = useSupabase();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [history, setHistory] = useState<CaptionHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    if (!session) {
-      router.push('/login');
-      return;
-    }
-
-    const page = Number(searchParams.get('page')) || 1;
-    setCurrentPage(page);
-    fetchHistory(page);
-  }, [session, router, searchParams]);
-
-  const fetchHistory = async (page: number) => {
+  const fetchHistory = useCallback(async (page: number) => {
     try {
       setLoading(true);
       
@@ -76,7 +73,7 @@ export default function HistoryPage() {
 
       if (error) throw error;
 
-      const formattedHistory = data.map((item: any) => ({
+      const formattedHistory = ((data || []) as CaptionRow[]).map((item) => ({
         id: item.id,
         date: new Date(item.created_at).toLocaleDateString('en-US', {
           month: 'short',
@@ -85,7 +82,7 @@ export default function HistoryPage() {
         }),
         caption: item.generated_caption,
         prompt: item.prompt,
-        niche: item.niches?.name || 'General',
+        niche: item.niches?.[0]?.name || 'General',
         created_at: item.created_at
       }));
 
@@ -95,13 +92,25 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemsPerPage, session?.user?.id]);
+
+  useEffect(() => {
+    if (!session) {
+      router.push('/login');
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const page = Number(params.get('page')) || 1;
+    setCurrentPage(page);
+    fetchHistory(page);
+  }, [session, router, fetchHistory]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
         .from('captions')
@@ -136,8 +145,7 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow pt-20">
+      <div className="flex-grow pt-20">
         <section className="py-8 bg-background/80 backdrop-blur-sm">
           <Container>
             <div className="max-w-4xl mx-auto">
@@ -244,7 +252,7 @@ export default function HistoryPage() {
             </div>
           </Container>
         </section>
-      </main>
+      </div>
     </div>
   );
 } 

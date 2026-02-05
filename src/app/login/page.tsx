@@ -2,8 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Container } from '@/components/ui/container';
 import { motion } from 'framer-motion';
 import { Mail, Lock } from 'lucide-react';
@@ -11,84 +10,36 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import Header from '@/components/Header';
-import { supabase } from '@/lib/supabase/client';
+import { FormInput } from '@/components/ui/form-input';
+import { useAuth } from '@/features/caption/hooks/useAuth';
 
 const LoginPage = () => {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [email, setEmail] = useState('');
-
-  // Load remembered email on component mount
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberMe(true);
-    }
-  }, []);
-
-  // Check if user is already authenticated
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push('/dashboard');
-      }
-    });
-  }, [router]);
+  const { login, loading, error, getRememberedEmail } = useAuth();
+  const [email, setEmail] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return getRememberedEmail() || '';
+  });
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(getRememberedEmail());
+  });
+  const [password, setPassword] = useState('');
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const formData = new FormData(event.target as HTMLFormElement);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    // Handle remember me
-    if (rememberMe) {
-      localStorage.setItem('rememberedEmail', email);
-    } else {
-      localStorage.removeItem('rememberedEmail');
-    }
-
+    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      router.push('/dashboard');
+      await login({ email, password, rememberMe });
     } catch (error) {
+      // Error is handled by the hook
       console.error('Login error:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setError('Invalid email or password');
-        } else {
-          setError(error.message);
-        }
-      } else {
-        setError('An error occurred during login');
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow flex items-center">
+      <div className="flex-grow flex items-center">
         <section className="w-full bg-background/80 backdrop-blur-sm">
           <Container>
             <div className="max-w-md mx-auto px-4">
@@ -110,39 +61,33 @@ const LoginPage = () => {
               >
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="flex flex-col">
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-foreground/60" />
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="Enter your email"
-                          className="pl-10 text-foreground bg-white/50 backdrop-blur-sm border-gray-200/50"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                        />
-                      </div>
-                    </div>
+                    <FormInput
+                      id="email"
+                      name="email"
+                      label="Email"
+                      type="email"
+                      placeholder="Enter your email"
+                      icon={Mail}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="email"
+                    />
 
-                    <div>
-                      <Label htmlFor="password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-foreground/60" />
-                        <Input
-                          id="password"
-                          name="password"
-                          type="password"
-                          placeholder="Enter your password"
-                          className="pl-10 text-foreground bg-white/50 backdrop-blur-sm border-gray-200/50"
-                          required
-                        />
-                      </div>
-                    </div>
+                    <FormInput
+                      id="password"
+                      name="password"
+                      label="Password"
+                      type="password"
+                      placeholder="Enter your password"
+                      icon={Lock}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                    />
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2">
                         <Checkbox 
                           id="remember" 
@@ -177,7 +122,7 @@ const LoginPage = () => {
 
                 <div className="mt-6 text-center">
                   <Text className="text-foreground/60">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Link href="/signup" className="text-primary hover:text-primary/90">
                       Sign up
                     </Link>
@@ -187,7 +132,7 @@ const LoginPage = () => {
             </div>
           </Container>
         </section>
-      </main>
+      </div>
     </div>
   );
 };
