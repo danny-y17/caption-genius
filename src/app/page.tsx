@@ -108,7 +108,7 @@ export default function Home() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <main className="flex-grow">
+            <div className="flex-grow">
                 {/* Hero Section */}
                 <section ref={heroRef} className="py-20 bg-gradient-to-b from-background to-background/80 relative overflow-hidden">
                     <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
@@ -251,7 +251,7 @@ export default function Home() {
                         </div>
                     </Container>
                 </section>
-            </main>
+            </div>
         </div>
     );
 }

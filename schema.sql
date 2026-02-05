@@ -296,6 +296,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION public.delete_user()
+RETURNS void AS $$
+DECLARE
+    uid UUID := auth.uid();
+BEGIN
+    IF uid IS NULL THEN
+        RAISE EXCEPTION 'Unauthorized';
+    END IF;
+
+    DELETE FROM public.scheduled_posts WHERE user_id = uid;
+    DELETE FROM public.captions WHERE user_id = uid;
+    DELETE FROM public.usage_logs WHERE user_id = uid;
+    DELETE FROM public.templates WHERE user_id = uid;
+    DELETE FROM public.ai_configurations WHERE user_id = uid;
+    DELETE FROM public.post_templates WHERE user_id = uid;
+    DELETE FROM public.profiles WHERE id = uid;
+    DELETE FROM auth.users WHERE id = uid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION public.delete_user() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_user() TO authenticated;
+
 -- Triggers
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users

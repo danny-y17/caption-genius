@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,7 +14,7 @@ interface Caption {
   generated_caption: string;
   niches: {
     name: string;
-  };
+  }[];
 }
 
 interface ScheduledPost {
@@ -28,7 +27,7 @@ interface ScheduledPost {
     generated_caption: string;
     niches: {
       name: string;
-    };
+    }[];
   };
 }
 
@@ -166,7 +165,7 @@ export function SchedulePostDialog({
                   <SelectItem key={caption.id} value={caption.id}>
                     <div className="flex flex-col">
                       <span className="line-clamp-1">{caption.generated_caption}</span>
-                      <span className="text-xs text-foreground/60">{caption.niches.name}</span>
+                      <span className="text-xs text-foreground/60">{caption.niches?.[0]?.name || 'General'}</span>
                     </div>
                   </SelectItem>
                 ))}

@@ -16,7 +16,6 @@ import {
   Calendar,
   Download
 } from 'lucide-react';
-import Header from '@/components/layout/Header';
 
 // Mock data - replace with actual API calls
 const mockAnalytics = {
@@ -68,8 +67,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow pt-20">
+      <div className="flex-grow pt-20">
         <section className="py-8 bg-background/80 backdrop-blur-sm">
           <Container>
             <div className="max-w-7xl mx-auto">
@@ -252,7 +250,7 @@ export default function AnalyticsPage() {
             </div>
           </Container>
         </section>
-      </main>
+      </div>
     </div>
   );
 } 

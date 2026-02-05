@@ -21,15 +21,15 @@ interface RecentCaption {
   prompt: string;
   niches: {
     name: string;
-  } | null;
+  }[] | null;
 }
 
 const niches = [
   { id: 'yoga', name: 'Yoga Studio', icon: '🧘‍♀️' },
   { id: 'coffee', name: 'Indie Coffee Shop', icon: '☕' },
   { id: 'fitness', name: 'Fitness Trainer', icon: '💪' },
-  { id: 'photography', name: 'Photography', icon: '📸' },
-  { id: 'salon', name: 'Hair Salon', icon: '💇‍♀️' },
+  { id: 'fashion', name: 'Fashion Brand', icon: '👗' },
+  { id: 'salon', name: 'Beauty Salon', icon: '💇‍♀️' },
   { id: 'food', name: 'Food Blogger', icon: '🍽️' },
 ];
 
@@ -372,7 +372,7 @@ export default function CaptionGeneratorPage() {
                           {new Date(item.created_at).toLocaleDateString()}
                         </span>
                         <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">
-                          {item.niches?.name || 'General'}
+                          {item.niches?.[0]?.name || 'General'}
                         </span>
                       </div>
                       <button

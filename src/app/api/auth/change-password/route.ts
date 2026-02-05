@@ -22,7 +22,32 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update password using Supabase
+    if (newPassword.length < 8) {
+      return NextResponse.json(
+        { message: 'New password must be at least 8 characters long' },
+        { status: 400 }
+      );
+    }
+
+    if (!session.user.email) {
+      return NextResponse.json(
+        { message: 'Unable to verify current user email' },
+        { status: 400 }
+      );
+    }
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      return NextResponse.json(
+        { message: 'Current password is incorrect' },
+        { status: 400 }
+      );
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     });

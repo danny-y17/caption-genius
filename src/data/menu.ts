@@ -1,5 +1,5 @@
 import { MenuConfig } from '@/types/menu';
-import { Home, Calendar, History, LogOut, Sparkles } from 'lucide-react';
+import { Home, Calendar, History, Sparkles } from 'lucide-react';
 
 export const menuConfig: MenuConfig = {
     authenticated: [
@@ -26,15 +26,15 @@ export const menuConfig: MenuConfig = {
     ],
     unauthenticated: [
         {
-            name: "Home",
+            text: "Home",
             url: "/"
         },
         {
-            name: "Pricing",
+            text: "Pricing",
             url: "/pricing"
         },
         {
-            name: "Login",
+            text: "Login",
             url: "/login"
         }
     ],

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Container } from '@/components/ui/container';
 import { motion } from 'framer-motion';
 import { Mail, Lock } from 'lucide-react';
@@ -11,24 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { Checkbox } from '@/components/ui/checkbox';
-import Header from '@/components/layout/Header';
 import { FormInput } from '@/components/ui/form-input';
 import { useAuth } from '@/features/caption/hooks/useAuth';
 
 const LoginPage = () => {
   const { login, loading, error, getRememberedEmail } = useAuth();
-  const [rememberMe, setRememberMe] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return getRememberedEmail() || '';
+  });
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(getRememberedEmail());
+  });
   const [password, setPassword] = useState('');
-
-  // Load remembered email on component mount
-  useEffect(() => {
-    const rememberedEmail = getRememberedEmail();
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberMe(true);
-    }
-  }, [getRememberedEmail]);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -43,8 +39,7 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow flex items-center">
+      <div className="flex-grow flex items-center">
         <section className="w-full bg-background/80 backdrop-blur-sm">
           <Container>
             <div className="max-w-md mx-auto px-4">
@@ -127,7 +122,7 @@ const LoginPage = () => {
 
                 <div className="mt-6 text-center">
                   <Text className="text-foreground/60">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Link href="/signup" className="text-primary hover:text-primary/90">
                       Sign up
                     </Link>
@@ -137,7 +132,7 @@ const LoginPage = () => {
             </div>
           </Container>
         </section>
-      </main>
+      </div>
     </div>
   );
 };

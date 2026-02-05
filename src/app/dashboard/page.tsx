@@ -19,7 +19,7 @@ interface RecentCaptionData {
   created_at: string;
   niches: {
     name: string;
-  } | null;
+  }[] | null;
 }
 
 export default function DashboardLanding() {
@@ -142,7 +142,7 @@ export default function DashboardLanding() {
                   <RecentCaption
                     key={caption.id}
                     text={caption.generated_caption}
-                    niche={caption.niches?.name || 'General'}
+                    niche={caption.niches?.[0]?.name || 'General'}
                     date={new Date(caption.created_at).toLocaleDateString()}
                     index={i}
                   />

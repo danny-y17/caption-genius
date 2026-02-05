@@ -82,15 +82,24 @@ export default function AccountPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
       });
 
-      if (error) {
-        throw error;
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to change password');
       }
 
-      setSuccess('Password changed successfully');
+      setSuccess(payload.message || 'Password changed successfully');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -103,12 +112,15 @@ export default function AccountPage() {
 
   const handleDeleteAccount = async () => {
     try {
-      const { error } = await supabase.auth.admin.deleteUser(session?.user.id || '');
-      
-      if (error) {
-        throw error;
+      const response = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to delete account');
       }
-      
+
       await supabase.auth.signOut();
       router.push('/login');
     } catch (error) {

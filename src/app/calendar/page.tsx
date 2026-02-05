@@ -1,27 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar as CalendarIcon, Clock, Plus, BarChart2, AlertCircle } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
-import Header from '@/components/layout/Header';
 import { useSupabase } from '@/app/providers/Providers';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
+import { format } from 'date-fns/format';
+import { parse } from 'date-fns/parse';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { getDay } from 'date-fns/getDay';
+import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { SchedulePostDialog } from '@/components/ui/schedule-post-dialog';
 import { PostPreviewDialog } from '@/components/ui/post-preview-dialog';
 
 const locales = {
-  'en-US': require('date-fns/locale/en-US'),
+  'en-US': enUS,
 };
 
 const localizer = dateFnsLocalizer({
@@ -43,7 +43,7 @@ interface ScheduledPost {
     generated_caption: string;
     niches: {
       name: string;
-    };
+    }[];
   };
 }
 
@@ -53,26 +53,25 @@ interface ContentMix {
   percentage: number;
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resource: ScheduledPost;
+}
+
 export default function CalendarPage() {
   const { session } = useSupabase();
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [contentMix, setContentMix] = useState<ContentMix[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchScheduledPosts();
-    } else {
-      setLoading(false);
-    }
-  }, [session]);
-
-  const fetchScheduledPosts = async () => {
+  const fetchScheduledPosts = useCallback(async () => {
     try {
       if (!session?.user?.id) {
         throw new Error('No authenticated user');
@@ -101,7 +100,15 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchScheduledPosts();
+    } else {
+      setLoading(false);
+    }
+  }, [session?.user?.id, fetchScheduledPosts]);
 
   const calculateContentMix = (posts: ScheduledPost[]) => {
     const mix: ContentMix[] = [
@@ -127,8 +134,8 @@ export default function CalendarPage() {
     setContentMix(mix);
   };
 
-  const handleEventClick = (event: any) => {
-    const post = event.resource as ScheduledPost;
+  const handleEventClick = (event: CalendarEvent) => {
+    const post = event.resource;
     setSelectedPost(post);
     setShowPreview(true);
   };
@@ -169,7 +176,7 @@ export default function CalendarPage() {
     };
   };
 
-  const calendarEvents = scheduledPosts.map(post => ({
+  const calendarEvents: CalendarEvent[] = scheduledPosts.map(post => ({
     id: post.id,
     title: post.caption.generated_caption,
     start: new Date(post.scheduled_time),
@@ -179,8 +186,7 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow pt-20">
+      <div className="flex-grow pt-20">
         <Container>
           <div className="max-w-7xl mx-auto">
             <motion.div
@@ -223,8 +229,7 @@ export default function CalendarPage() {
                     endAccessor="end"
                     style={{ height: '100%' }}
                     onSelectEvent={handleEventClick}
-                    onSelectSlot={(slotInfo) => {
-                      setSelectedDate(slotInfo.start);
+                    onSelectSlot={() => {
                       setShowScheduleForm(true);
                     }}
                     selectable
@@ -332,7 +337,7 @@ export default function CalendarPage() {
             post={selectedPost ? {
               id: selectedPost.id,
               caption: selectedPost.caption.generated_caption,
-              niche: selectedPost.caption.niches.name,
+              niche: selectedPost.caption.niches?.[0]?.name || 'General',
               scheduledTime: selectedPost.scheduled_time,
               platform: selectedPost.platform,
               contentType: selectedPost.content_type,
@@ -353,7 +358,7 @@ export default function CalendarPage() {
             editingPost={editingPost}
           />
         </Container>
-      </main>
+      </div>
     </div>
   );
 } 

@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Edit, Trash2, Clock, Share2 } from 'lucide-react';
+import { Edit, Trash2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface PostPreviewDialogProps {
