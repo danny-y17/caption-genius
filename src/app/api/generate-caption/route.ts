@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { openai } from '@/services/openai';
+import { getOpenAIClient } from '@/services/openai';
 import {
   ValidationError,
   validateCaptionInput,
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     prompt += '\nMake it authentic, engaging, and suitable for Instagram. Include relevant hashtags.';
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: DEFAULT_MODEL,
       messages: [
         {
