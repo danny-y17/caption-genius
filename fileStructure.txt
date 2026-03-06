@@ -1,13 +1,29 @@
 /src
-├── /app           # App Router pages, layouts, API routes, providers
-├── /components    # Reusable UI and layout components
-├── /config        # App-level config values
-├── /context       # React context providers
-├── /data          # Static/data config used by views
-├── /features      # Feature-specific hooks and config
-├── /lib           # Shared library code (auth, utils, supabase, validation)
-├── /services      # Service integrations (OpenAI, etc.)
-├── /styles        # Global styling
-├── /types         # Shared TypeScript types
-└── /utils         # General helper functions
-
+├── /app                        # App Router routes, layouts, providers, API handlers
+│   ├── /api
+│   │   ├── /auth               # auth callback, password, account routes
+│   │   └── /generate-caption   # caption generation endpoint
+│   ├── /providers              # top-level app providers
+│   ├── /account
+│   ├── /analytics
+│   ├── /calendar
+│   ├── /caption
+│   ├── /customize
+│   ├── /dashboard
+│   ├── /history
+│   ├── /login
+│   └── /signup
+├── /components
+│   ├── /dashboard              # dashboard-only components
+│   ├── /layout                 # header/footer/layout components
+│   └── /ui                     # reusable shared UI primitives
+├── /data                       # static data and config consumed by pages/components
+├── /features
+│   └── /caption
+│       └── /hooks              # caption feature hooks
+├── /lib
+│   ├── /supabase               # server/client supabase helpers + actions
+│   ├── /utils                  # utility helpers
+│   └── /validation             # input and payload validation
+├── /services                   # external integrations (OpenAI)
+└── /types                      # global/shared TS types
